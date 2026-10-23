@@ -40,6 +40,6 @@ class SidebarLayoutTests(unittest.TestCase):
         # Verificar el orden de carga sin acoplar las pruebas al número de versión.
         import re
         scripts=re.findall(r'<script src="\./([^"?]+\.js)(?:\?v=[^"]+)?" defer></script>',self.html)
-        self.assertEqual(scripts,['app.js','library.js','sidebar-layout.js','news-effects.js','features.js','v12.js','v13.js'])
+        self.assertEqual(scripts,['app.js','library.js','sidebar-layout.js','news-effects.js','features.js','v12.js','v13.js','feed-ux.js','reader-ux.js'])
         self.assertRegex(self.html,r'<link rel="stylesheet" href="\./sidebar-layout\.css\?v=[^"]+">')
         self.assertLess(self.html.index('sidebar-layout.css?v='),self.html.index('</head>'))

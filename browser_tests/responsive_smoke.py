@@ -605,9 +605,14 @@ def main():
                         page.locator("#feedView:not([hidden])").wait_for()
                         assert page.locator("#feedHeading").inner_text() == "Latinoamérica"
                         # Acciones secundarias plegadas sin perder los controles existentes.
-                        expect(page.locator("#feedAdvanced")).not_to_have_attribute("open", "")
                         expect(page.locator("#v12Date")).to_be_hidden()
-                        page.locator("#feedAdvanced summary").click()
+                        if width <= 640:
+                            expect(page.locator("#feedFilterPanel")).to_be_hidden()
+                            page.locator("#feedFiltersToggle").click()
+                            expect(page.locator("#sourceSelect")).to_be_visible()
+                        else:
+                            expect(page.locator("#feedAdvanced")).not_to_have_attribute("open", "")
+                            page.locator("#feedAdvanced summary").click()
                         expect(page.locator("#v12Date")).to_be_visible()
                         check_visible_boxes(page, [".filter-controls","#v12Date","#v12SaveSearch","#markAllVisible"],
                                             f"barra única de noticias {browser_name} {width}px")
@@ -622,10 +627,14 @@ def main():
                         assert page.locator("#markAllVisible svg").count() == 1
                         assert page.locator("#v12SaveSearch").inner_text() == ""
                         assert page.locator("#markAllVisible").inner_text() == ""
-                        toolbar=page.locator("#feedView .filter-bar").bounding_box()
                         news=page.locator("#articleGrid").bounding_box()
-                        assert news["y"]-toolbar["y"]-toolbar["height"] < 45, (
-                            width,browser_name,news["y"]-toolbar["y"]-toolbar["height"])
+                        # Los filtros visibles ocupan su espacio en el flujo;
+                        # ningún panel o etiqueta debe flotar sobre las noticias.
+                        blocks=page.locator('#feedView .filter-bar, #feedFilterPanel, #feedActiveFilters, #v12SavedSearches')
+                        bottoms=[box['y']+box['height'] for i in range(blocks.count())
+                                 if blocks.nth(i).is_visible() and (box:=blocks.nth(i).bounding_box())]
+                        gap=news['y']-max(bottoms)
+                        assert -2 <= gap < 45, (width,browser_name,gap)
                         # El filtro geográfico duplicaba las seis carpetas.
                         assert page.locator("#v12Geo").count() == 0
                         assert page.locator("#v12CountryTabs").count() == 0
@@ -697,6 +706,12 @@ def main():
                         raise
                     finally:
                         context.close()
+                if browser_name == "chromium":
+                    import reading_experience
+                    reading_experience.OUTPUT = output / "reading-experience"
+                    reading_experience.OUTPUT.mkdir(parents=True, exist_ok=True)
+                    for reading_width in (320, 390, 768, 1440):
+                        reading_experience.exercise(browser, base, reading_width)
             finally:
                 browser.close()
     finally:

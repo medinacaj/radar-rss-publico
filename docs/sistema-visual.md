@@ -3,6 +3,8 @@
 ## Objetivo de producto
 RadarRRS es un **portal público de noticias** y un lector de fuentes RSS, no un panel técnico. Deben verse primero las noticias. Las herramientas avanzadas se muestran a demanda.
 
+Extensión de lectura V11.2: `reading-ux.css` aplica una jerarquía común de titular, extracto y medio/fecha sin cambiar las seis categorías ni la identidad Ink & Paper. Los controles secundarios son neutros; «Mostrar noticias» conserva el acento lima de las acciones principales. Los filtros activos son eliminables, las preferencias globales se identifican como «Ajustar» y no se borran al limpiar una vista. En móvil, el panel Filtros agrupa los mismos controles con objetivos táctiles de al menos 44 px. El lector mantiene navegación y acciones visibles mientras el extracto se desplaza, y restaura foco/contexto al cerrar. Las novedades se aplican solo tras pulsar Mostrar; las acciones de lectura masiva ofrecen Deshacer.
+
 ## Jerarquía fija
 
 1. Inicio: mesa de noticias de DOS COLUMNAS: **En portada** (3 artículos en filas con miniatura lateral) y **Últimas publicaciones** (titulares breves al lado); luego novedades funcionales, guardadas, carpetas y radar/tendencias.

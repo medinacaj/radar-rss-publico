@@ -37,6 +37,7 @@
   function persistPrefs() { save(KEY, prefs); }
   function myCats() { return prefs.categories.filter(cat => state.categories.includes(cat)); }
   window.RadarV12 = Object.freeze({
+    getFeedGeo(){return {id:geo,label:regionName[geo]};},
     dashboardMatch(item) {
       const selected = myCats();
       return !prefs.mine || !selected.length || (item.categories || []).some(cat => selected.includes(cat));

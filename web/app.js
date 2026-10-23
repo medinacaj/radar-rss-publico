@@ -882,13 +882,25 @@ function emptyState(filtered) {
     mk('p','',isEmpty ? 'Aún no se han cargado noticias. Revisa el estado de las fuentes RSS o vuelve a intentarlo después de la próxima actualización.' : 'Prueba otra categoría o fuente, desmarca tus filtros o busca con otros términos.'));
   return el;
 }
-let actionToastTimer;
-function actionToast(message){
+let actionToastTimer,actionToastVersion=0;
+function actionToast(message,{undo}={}){
   const toast=$('actionToast');
   toast.textContent=message;
   toast.hidden=false;
+  const version=++actionToastVersion;
+  let undoAvailable=typeof undo==='function';
+  if(undoAvailable){
+    const button=mk('button','toast-undo','Deshacer');button.type='button';
+    button.addEventListener('click',()=>{
+      if(!undoAvailable||version!==actionToastVersion)return;
+      undoAvailable=false;
+      window.clearTimeout(actionToastTimer);
+      undo(button);
+    });
+    toast.append(button);
+  }
   window.clearTimeout(actionToastTimer);
-  actionToastTimer=window.setTimeout(()=>{toast.hidden=true;},3200);
+  actionToastTimer=window.setTimeout(()=>{undoAvailable=false;toast.hidden=true;},undoAvailable?8000:3200);
 }
 async function shareArticle(item) {
   const url=safeURL(item.url);
@@ -1203,10 +1215,13 @@ function initCardMenu(){
   window.addEventListener('wheel',()=>closeCardMenu(),{passive:true});
   document.addEventListener('touchmove',()=>closeCardMenu(),{passive:true});
 }
+// Una revisión por ID impide que Deshacer borre una marca manual posterior.
+const readRevisions=new Map();
 function markRead(id,value){
   const original=state.read.has(id);
   if(value)state.read.add(id);else state.read.delete(id);
   if(original===value)return;
+  readRevisions.set(id,(readRevisions.get(id)||0)+1);
   const active=document.activeElement;
   const returnFocus=active?.classList?.contains('article-read-toggle')===true;
   persist('radar-read',state.read);
@@ -1218,6 +1233,41 @@ function markRead(id,value){
       .find(el=>el.dataset.articleId===id)?.querySelector('.article-read-toggle');
     (target||$('articleGrid').querySelector('.article-read-toggle')||document.querySelector('.mode-tab.active'))?.focus({preventScroll:true});
   }
+}
+function markArticlesRead(items){
+  const focusOrigin=document.activeElement;
+  const readSet=state.read;
+  const changed=[];
+  for(const item of items){
+    const id=item?.id;
+    if(typeof id!=='string'||!id||state.read.has(id))continue;
+    state.read.add(id);
+    const revision=(readRevisions.get(id)||0)+1;
+    readRevisions.set(id,revision);changed.push({id,revision});
+  }
+  if(!changed.length){actionToast('No había noticias pendientes.');return 0;}
+  persist('radar-read',state.read);render();
+  actionToast(changed.length===1?'1 noticia marcada como leída.':format.format(changed.length)+' noticias marcadas como leídas.',{
+    undo:undoButton=>{
+      const restoreFocus=document.activeElement===undoButton;
+      let reverted=0;
+      for(const {id,revision} of changed){
+        if(state.read!==readSet||readRevisions.get(id)!==revision||!state.read.has(id))continue;
+        state.read.delete(id);readRevisions.set(id,revision+1);reverted++;
+      }
+      if(reverted){persist('radar-read',state.read);render();}
+      actionToast(reverted?'Se deshizo la marca de lectura.':'No quedan marcas de este lote por deshacer.');
+      // El mensaje retira Deshacer del DOM. Devolver su foco al control estable
+      // del lote sin interferir con otro diálogo o una acción de foco posterior.
+      if(restoreFocus&&focusOrigin?.isConnected&&!focusOrigin.disabled&&
+        !focusOrigin.matches?.(':disabled')&&!focusOrigin.closest('[hidden],[inert]')&&
+        !document.querySelector('dialog[open]')&&
+        (document.activeElement===undoButton||document.activeElement===document.body)){
+        focusOrigin.focus({preventScroll:true});
+      }
+    }
+  });
+  return changed.length;
 }
 function render() {
   const filtered=applyFilters(), visible=filtered.slice(0,state.page*state.pageSize);
@@ -1274,6 +1324,9 @@ function updateHistoryButton(){
   else if(hasHistory()&&state.pageView==='feed'){
     $('loadMore').hidden=false;$('loadMore').disabled=false;
     $('loadMore').replaceChildren(mk('span','','Cargar noticias anteriores'),svgIcon('arrow-down'));
+  }else{
+    $('loadMore').disabled=false;
+    $('loadMore').replaceChildren(mk('span','','Cargar más noticias'),svgIcon('arrow-down'));
   }
 }
 async function loadHistory(){
@@ -1301,8 +1354,10 @@ async function loadHistory(){
       }
       state.items=[...items.values()].sort((a,b)=>String(b.published_at||b.first_seen_at||'').localeCompare(String(a.published_at||a.first_seen_at||'')));
       state.historyLoaded=true;
-    }catch(error){console.warn('Historial RSS:',error);state.historyFailed=true;actionToast('No fue posible cargar noticias anteriores.');}
-    finally{state.historyLoading=false;historyRequest=null;render();}
+    }catch(error){
+      if(manifest===state.feedMeta){console.warn('Historial RSS:',error);state.historyFailed=true;actionToast('No fue posible cargar noticias anteriores.');}
+    }
+    finally{if(manifest===state.feedMeta){state.historyLoading=false;historyRequest=null;render();}}
   })();
   return historyRequest;
 }
@@ -1330,12 +1385,13 @@ function publishNewRSSNews(previousIds=null){
 }
 
 // Comprobación LOCAL de publicaciones nuevas: cada 15 min.
-// La recopilación de RSS de origen sigue cada seis horas por GitHub Actions.
+// La recopilación de RSS de origen sigue cada tres horas por GitHub Actions.
 const CHECK_INTERVAL_MS=15*60*1000;
 let nextCheckAt=Date.now()+CHECK_INTERVAL_MS;
 let checkStartedAt=Date.now();
 let checkTimer=null;
 let feedRefreshBusy=false;
+let pendingPublication=null;
 function freshnessLabel(){
   if(!state.generated)return state.ready?'Sin sincronizar':'Cargando…';
   const age=ageDate(state.generated);
@@ -1344,7 +1400,7 @@ function freshnessLabel(){
 function updateScheduleProgress(){
   $('lastUpdate').textContent=feedRefreshBusy?'Buscando novedades…':freshnessLabel();
   const exact=state.generated?' Última recopilación: '+shortDate(state.generated)+'.':'';
-  const description='Radar RSS busca noticias nuevas cada 15 minutos; los medios se recopilan aproximadamente cada 6 horas.'+exact;
+  const description='Radar RSS busca noticias nuevas cada 15 minutos; los medios se recopilan aproximadamente cada 3 horas.'+exact;
   $('refreshCycle').title=description;
   $('lastUpdate').title=description;
   $('refreshNow').disabled=feedRefreshBusy;
@@ -1363,25 +1419,50 @@ async function refreshPublishedData(){
   feedRefreshBusy=true;updateScheduleProgress();
   try{
     const meta=await dataFetch('./data/meta.json?check='+Date.now());
-    if(!meta.generated_at||meta.generated_at===state.generated)return;
+    if(!meta?.generated_at||meta.generated_at===state.generated||meta.generated_at===pendingPublication?.meta.generated_at)return;
+    const generatedTime=typeof meta.generated_at==='string'?Date.parse(meta.generated_at):NaN;
+    if(!Number.isFinite(generatedTime))throw Error('Fecha de publicación RSS incompatible');
+    if(generatedTime<=Date.parse(state.generated)||generatedTime<=Date.parse(pendingPublication?.meta.generated_at))return;
     const [sources,latest,status]=await Promise.all([
       dataFetch('./data/sources.json?check='+Date.now()),
       dataFetch('./data/latest.json?check='+Date.now()),
       dataFetch('./data/status.json?check='+Date.now())
     ]);
-    if(latest.generated_at!==meta.generated_at)return;
+    // latest y status llevan la misma generación del manifiesto. sources no
+    // publica sello temporal; se valida su estructura antes de aceptar el lote.
+    if(latest?.generated_at!==meta.generated_at||status?.checked_at!==meta.generated_at||
+      !Array.isArray(latest.items)||!latest.items.every(item=>item&&typeof item.id==='string'&&item.id&&
+        [item.source_ids,item.categories].every(values=>values===undefined||Array.isArray(values)&&values.every(value=>typeof value==='string')))||
+      !Array.isArray(sources?.sources)||!sources.sources.every(source=>source&&typeof source.id==='string'&&
+        typeof source.name==='string'&&typeof source.category==='string')||
+      !Array.isArray(sources.categories)||!sources.categories.every(category=>typeof category==='string')||
+      !Array.isArray(status.feeds)||!status.feeds.every(feed=>feed&&typeof feed.id==='string')||
+      !Array.isArray(meta.archive_files)||!meta.archive_files.every(file=>/^archive-\d{2}\.json$/.test(file))){
+      throw Error('Publicación RSS incompatible');
+    }
+    pendingPublication={meta,sources,latest,status};
     const previousIds=new Set(state.items.map(item=>item.id));
-    state.sources=Array.isArray(sources.sources)?sources.sources:state.sources;
-    state.categories=Array.isArray(sources.categories)?sources.categories:state.categories;
-    state.items=Array.isArray(latest.items)?latest.items:state.items;
-    state.feedMeta=meta;state.historyLoaded=false;state.historyFailed=false;
-    state.health=Array.isArray(status.feeds)?status.feeds:state.health;
-    state.generated=meta.generated_at;
-    updateScheduleProgress();
-    buildNav();fillSelect();updateHeader();statusSummary();render();
-    publishNewRSSNews(previousIds);
+    const added=new Set(latest.items.filter(item=>!previousIds.has(item.id)).map(item=>item.id)).size;
+    $('publicationMessage').textContent=added?`Hay ${format.format(added)} ${added===1?'noticia nueva':'noticias nuevas'}`:'Hay una actualización disponible';
+    $('publicationNotice').hidden=false;
   }catch(error){console.warn('Comprobación automática RSS:',error);}
   finally{feedRefreshBusy=false;scheduleNextCheck();}
+}
+function applyPendingPublication(){
+  if(!pendingPublication)return;
+  const {meta,sources,latest,status}=pendingPublication;
+  const previousIds=new Set(state.items.map(item=>item.id));
+  // Cambiar todo antes de renderizar; cualquier descarga antigua de historial
+  // queda invalidada por la identidad de feedMeta sin cerrar el lector abierto.
+  state.sources=sources.sources;state.categories=sources.categories;
+  state.items=latest.items;state.health=status.feeds;
+  state.feedMeta=meta;state.generated=meta.generated_at;
+  state.historyLoaded=false;state.historyLoading=false;state.historyFailed=false;
+  historyRequest=null;pendingPublication=null;
+  $('publicationNotice').hidden=true;
+  updateScheduleProgress();
+  buildNav();fillSelect();updateHeader();statusSummary();render();
+  publishNewRSSNews(previousIds);
 }
 
 async function dataFetch(path, fallback) {
@@ -1434,6 +1515,7 @@ function initHandlers() {
   window.setInterval(updateScheduleProgress,30_000);
   scheduleNextCheck();
   $('refreshNow').addEventListener('click',()=>{void refreshPublishedData();});
+  $('publicationApply').addEventListener('click',applyPendingPublication);
   window.addEventListener('focus',()=>{if(document.visibilityState==='visible'&&Date.now()>=nextCheckAt){void refreshPublishedData();}});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(Date.now()>=nextCheckAt){void refreshPublishedData();}else{updateScheduleProgress();}}});
   // Resolver la función en cada cambio: library.js y features.js la amplían después de cargar app.js.
@@ -1479,7 +1561,7 @@ function initHandlers() {
   });
   $('loadMore').addEventListener('click',()=>{if(hasHistory()&&state.page*state.pageSize>=applyFilters().length){void loadHistory();return;}state.page+=1;render();});
   $('themeToggle').addEventListener('click',()=>setTheme(document.body.classList.contains('light')?'dark':'light',true));
-  $('markAllVisible').addEventListener('click',()=>{const visible=applyFilters().slice(0,state.page*state.pageSize);for(const item of visible)state.read.add(item.id);persist('radar-read',state.read);render();});
+  $('markAllVisible').addEventListener('click',()=>{markArticlesRead(applyFilters().slice(0,state.page*state.pageSize));});
   const dialog=$('aboutDialog');
   const open=e=>{if(e)e.preventDefault();dialog.showModal();};
   $('aboutButton').addEventListener('click',open); $('footerInfo').addEventListener('click',open);

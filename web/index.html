@@ -39,6 +39,7 @@
   <link rel="stylesheet" href="./features.css?v=1.2.2">
   <link rel="stylesheet" href="./v12.css?v=1.2.3">
   <link rel="stylesheet" href="./v13.css?v=7.1.0">
+  <link rel="stylesheet" href="./reading-ux.css?v=1.0.0">
   <title>Radar RSS — Actualidad en un solo lugar</title>
 </head>
 <body class="light radar-hybrid">
@@ -81,7 +82,7 @@
           <label class="search-wrap"><span class="sr-only">Buscar en todas las noticias</span><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input id="searchInput" type="search" placeholder="Buscar noticias…" autocomplete="off" enterkeyhint="search" aria-keyshortcuts="/"><kbd class="search-shortcut" aria-hidden="true">/</kbd></label>
         </div>
         <div class="topbar-actions">
-          <div class="topbar-refresh" id="refreshCycle" role="group" aria-label="Actualización de noticias" title="Radar RSS busca noticias nuevas cada 15 minutos. Los medios se recopilan aproximadamente cada 6 horas.">
+          <div class="topbar-refresh" id="refreshCycle" role="group" aria-label="Actualización de noticias" title="Radar RSS busca noticias nuevas cada 15 minutos. Los medios se recopilan aproximadamente cada 3 horas.">
             <span class="update-label" id="lastUpdate">Sin sincronizar</span>
             <button id="refreshNow" class="refresh-now" type="button" title="Comprobar ahora si hay publicaciones nuevas" aria-label="Comprobar novedades ahora"><span data-icon="refresh" class="ui-icon-slot" aria-hidden="true"></span></button>
           </div>
@@ -106,6 +107,10 @@
             <button id="statusDetails" class="status-details" type="button" hidden>Ver detalles</button>
             <button id="statusDismiss" class="status-dismiss" type="button" title="Cerrar aviso" aria-label="Cerrar aviso de estado de las fuentes"><span data-icon="x" class="ui-icon-slot" aria-hidden="true"></span></button>
           </span>
+        </div>
+        <div id="publicationNotice" class="publication-notice" role="status" hidden>
+          <span id="publicationMessage"></span>
+          <button id="publicationApply" type="button">Mostrar noticias</button>
         </div>
         <section id="dashboardView" class="dashboard-view" aria-labelledby="dashboardTitle" hidden>
           <h1 id="dashboardTitle" class="sr-only">Portada de Radar RSS</h1>
@@ -163,7 +168,7 @@
             </div>
           </header>
           <div class="briefing-sections" id="briefingSections"></div>
-          <p class="briefing-note">Ordenado por cobertura (número de medios distintos), no por clics. Se actualiza con cada recopilación, aproximadamente cada 6 horas.</p>
+          <p class="briefing-note">Ordenado por cobertura (número de medios distintos), no por clics. Se actualiza con cada recopilación, aproximadamente cada 3 horas.</p>
         </section>
         <section class="feed-area" id="feedView" aria-labelledby="feedHeading">
           <div class="section-heading"><div><span class="section-eyebrow" id="sectionEyebrow">SELECCIÓN EDITORIAL</span><h1 id="feedHeading">Todas las noticias</h1><p id="feedDescription">Titulares y novedades de tus medios favoritos.</p></div><span class="count-label" id="visibleCount">0 ARTÍCULOS</span></div>
@@ -350,11 +355,11 @@
         <section class="settings-pane" data-settings-pane="health" aria-label="Estado de las fuentes RSS" hidden>
           <h3>Estado de RSS</h3><p class="setting-hint">Medios que no se pudieron leer en la última revisión automática. Que un medio no esté disponible no significa que haya dejado de publicar.</p>
           <div id="healthSummary" class="health-summary"></div><div id="healthFeedList" class="health-list"></div>
-          <p class="setting-admin">El intervalo de actualización del servidor está definido en <a href="https://github.com/medinacaj/radar-rss-publico/blob/main/.github/workflows/deploy.yml" rel="noopener noreferrer" target="_blank">GitHub Actions</a> (aproximadamente cada seis horas). Un visitante no puede cambiarlo desde la web pública.</p>
+          <p class="setting-admin">El intervalo de actualización del servidor está definido en <a href="https://github.com/medinacaj/radar-rss-publico/blob/main/.github/workflows/deploy.yml" rel="noopener noreferrer" target="_blank">GitHub Actions</a> (aproximadamente cada tres horas). Un visitante no puede cambiarlo desde la web pública.</p>
         </section>
       </div>
     </div>
-    <div class="settings-footer"><span>Preferencias del navegador · Radar RSS</span><button type="button" class="dialog-close" id="settingsDone">Guardar y cerrar</button></div>
+    <div class="settings-footer"><span>Los cambios se guardan automáticamente en este navegador.</span><button type="button" class="dialog-close" id="settingsDone">Listo</button></div>
   </dialog>
   <div id="cardMenu" class="card-menu" role="menu" aria-label="Más acciones de la noticia" hidden>
     <button type="button" role="menuitem" data-card-action="share"><span data-icon="share" class="ui-icon-slot" aria-hidden="true"></span><span>Compartir</span></button>
@@ -363,12 +368,14 @@
   </div>
   <button id="backTop" class="back-to-top" type="button" aria-label="Volver arriba" title="Volver arriba" hidden><span data-icon="arrow-up" class="ui-icon-slot" aria-hidden="true"></span></button>
   <div id="actionToast" class="action-toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
-  <script src="./app.js?v=9.0.0" defer></script>
-  <script src="./library.js?v=1.7.4" defer></script>
+  <script src="./app.js?v=9.1.0" defer></script>
+  <script src="./library.js?v=1.8.0" defer></script>
   <script src="./sidebar-layout.js?v=1.1.0" defer></script>
   <script src="./news-effects.js?v=1.0.0" defer></script>
   <script src="./features.js?v=1.0.0" defer></script>
-  <script src="./v12.js?v=1.2.5" defer></script>
-  <script src="./v13.js?v=1.4.0" defer></script>
+  <script src="./v12.js?v=1.3.0" defer></script>
+  <script src="./v13.js?v=1.4.1" defer></script>
+  <script src="./feed-ux.js?v=1.0.0" defer></script>
+  <script src="./reader-ux.js?v=1.0.0" defer></script>
 </body>
 </html>

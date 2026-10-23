@@ -8,7 +8,7 @@ Proyecto público sin backend ni cuentas. El catálogo contiene 178 fuentes RSS 
 
 ```mermaid
 flowchart LR
-  A[OPML: 178 feeds] --> B[GitHub Actions: cada 6 horas]
+  A[OPML: 178 feeds] --> B[GitHub Actions: cada 3 horas]
   B --> C[Python: RSS/Atom y deduplicación]
   C --> D[JSON estáticos]
   D --> E[GitHub Pages]
@@ -34,6 +34,15 @@ flowchart LR
 - **Temas que sigo, «Mientras no estabas», Resumen del día** (escuchar, copiar o compartir por WhatsApp) y **atajos de teclado** (`?`). Todo se guarda solo en el navegador.
 - **Modo ligero y lectura sin conexión** (`sw.js`): red primero; sin conexión, la última copia del propio sitio.
 - **Feeds de salida** en `feeds/`: `mas-cubierto.xml` y uno por carpeta.
+
+## Continuidad de lectura y filtros
+
+- Los filtros activos se muestran con su alcance y pueden quitarse por separado. «Limpiar filtros» conserva las preferencias de fuentes ocultas, palabras silenciadas y ocultar leídas; sus etiquetas permiten abrir el ajuste correspondiente.
+- En móvil, «Filtros» agrupa los controles existentes e indica cuántos están activos. Los estados sin resultados ofrecen una acción específica para ampliar la búsqueda.
+- Una nueva publicación se anuncia mediante «Mostrar noticias»: el listado actual permanece disponible hasta que el lector decide actualizarlo.
+- Marcar un lote como leído muestra la cantidad cambiada y permite «Deshacer» durante ocho segundos, conservando las marcas previas y otras acciones posteriores.
+- La vista previa incorpora Anterior/Siguiente, posición dentro del listado filtrado y «Marcar como no leída». Al cerrarla recupera el contexto del listado.
+- Configuración explica que los cambios se guardan automáticamente en este navegador; «Listo» cierra el diálogo.
 
 ## Interacción y personalización V1.2
 
@@ -130,7 +139,7 @@ Abrir `http://localhost:8000` (no abrir el archivo HTML haciendo doble clic: `fe
 
 ## Actualización y edición
 
-- **Automática:** aproximadamente cada seis horas mediante cron UTC `17 */6 * * *`. GitHub puede retrasar u omitir alguna ejecución; en repos públicos, la programación puede desactivarse por inactividad prolongada. El flujo también puede iniciarse manualmente.
+- **Automática:** aproximadamente cada tres horas mediante cron UTC `17 */6 * * *`. GitHub puede retrasar u omitir alguna ejecución; en repos públicos, la programación puede desactivarse por inactividad prolongada. El flujo también puede iniciarse manualmente.
 - **Modificar fuentes:** editar `sources/feeds.opml`, confirmar y esperar el siguiente flujo. No existe límite fijo de fuentes en la aplicación, pero más fuentes incrementan consumo de Actions y tiempo de recopilación.
 - **Número de artículos:** 12 por feed por ciclo, hasta 5.000 noticias en caché y un máximo de 45 días por defecto. Ajustable en `deploy.yml` / `collect.py`.
 - **Sitio sin noticias después de publicar:** revisar los detalles de `Actions` y `data/status.json`. La aplicación no inventa noticias ni reemplaza automáticamente feeds problemáticos.

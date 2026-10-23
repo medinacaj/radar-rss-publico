@@ -57,6 +57,15 @@ function readTags(data){
 }
 tags=readTags(rawTags);
 let activeFolder=null,activeTag='';
+// Read-only snapshot for the feed's visible filter summary; no library data is removed.
+window.RadarLibrary=Object.freeze({
+ getFeedFilters(){return {
+  folder:activeFolder?{id:activeFolder,label:activeFolder,kind:'manual'}:
+   state.category!=='all'?{id:state.category,label:folderName('default',state.category),kind:'default'}:null,
+  tag:activeTag
+ };},
+ clearTagFilter(){activeTag='';const select=document.getElementById('libraryTagFilter');if(select)select.value='';}
+});
 
 const FOLDER_OVERLAY_KEY='radar-default-folders-v1';
 let defaults=(()=>{try{const obj=JSON.parse(localStorage.getItem(FOLDER_OVERLAY_KEY)||'{}');
@@ -256,14 +265,7 @@ async function markAllNewsRead(){
   if(state.historyFailed){actionToast('No se pudo cargar el historial. No se cambió la lectura.');return;}
  }
  const active=new Set(state.sources.filter(x=>!state.hiddenSources.has(x.id)).map(x=>x.id));
- let total=0;
- for(const item of state.items){
-  if(!state.read.has(item.id)&&(item.source_ids||[]).some(id=>active.has(id))){
-   state.read.add(item.id);total++;
-  }
- }
- persist('radar-read',state.read);buildNav();render();
- actionToast(total?total+' noticias marcadas como leídas.':'No había noticias pendientes.');
+ markArticlesRead(state.items.filter(item=>(item.source_ids||[]).some(id=>active.has(id))));
 }
 function runFolderAction(command){
  if(!folderSelection)return;
@@ -283,11 +285,8 @@ function runFolderAction(command){
  else if(command==='sources')openFolderEditor(kind,id,false,true);
  else if(command==='delete')deleteFolder(kind,id);
  else if(command==='read'){
-  const ids=new Set(folderSources(kind,id));let count=0;
-  for(const item of state.items)
-   if(!state.read.has(item.id)&&(item.source_ids||[]).some(s=>ids.has(s))){state.read.add(item.id);count++;}
-  persist('radar-read',state.read);hideFolderMenu();render();
-  actionToast(count+' noticias marcadas como leídas.');
+  const ids=new Set(folderSources(kind,id));hideFolderMenu();
+  markArticlesRead(state.items.filter(item=>(item.source_ids||[]).some(source=>ids.has(source))));
  }
 }
 function installFolderUI(){

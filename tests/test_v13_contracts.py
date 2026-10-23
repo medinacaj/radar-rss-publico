@@ -94,7 +94,7 @@ class V13Contracts(unittest.TestCase):
         self.assertIn('v13.css?v=7.1.0',self.html)
         self.assertIn('Portada editorial V5.3',css)
         self.assertIn('grid-template-columns:repeat(3,minmax(0,1fr))',css)
-        self.assertIn("radar-rss-v27",self.sw)
+        self.assertIn("radar-rss-v28",self.sw)
 
     def test_card_read_action_is_visible_and_syncs_values(self):
         self.assertIn("article-action article-read-toggle",self.app)

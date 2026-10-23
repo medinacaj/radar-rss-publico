@@ -37,7 +37,7 @@ Esta dirección es un ejemplo, no un sitio actualmente desplegado.
 ## 5. Mantenimiento
 
 - Modificar `sources/feeds.opml` para añadir, reemplazar o quitar fuentes.
-- Los contenidos se intentarán actualizar cada 6 horas. Algunas consultas RSS pueden devolver 403, 429 u otros errores: revisar `web/data/status.json` generado durante Actions y el resumen mostrado en la web.
+- Los contenidos se intentarán actualizar cada 3 horas. Algunas consultas RSS pueden devolver 403, 429 u otros errores: revisar `web/data/status.json` generado durante Actions y el resumen mostrado en la web.
 - GitHub puede retrasar tareas programadas y desactivarlas si el repositorio público no registra actividad durante 60 días. Revisar periódicamente Actions.
 - Las noticias se guardan como JSON desplegado, no como commits individuales en la rama principal. La caché temporal entre ejecuciones no es garantía de histórico permanente.
 - Para sincronizar favoritos entre dispositivos o publicar cada pocos minutos, la siguiente versión requerirá almacenamiento persistente y posiblemente otro servicio de programación.
