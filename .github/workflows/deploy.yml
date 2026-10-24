@@ -86,7 +86,7 @@ jobs:
           node tests/test_sidebar_behavior.cjs
           node tests/test_news_effects.cjs
       - name: Obtener noticias
-        run: python scripts/collect.py --opml sources/feeds.opml --out web/data --days 45 --workers 8 --image-fallback
+        run: python scripts/collect.py --opml sources/feeds.opml --out web/data --days 90 --workers 8 --max-per-feed 40 --image-fallback
       - name: Validar JSON antes de publicar
         run: python scripts/validate_data.py web/data
       - name: Preparar auditoría editorial orientativa

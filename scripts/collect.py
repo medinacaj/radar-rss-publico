@@ -546,8 +546,8 @@ def write_json(path: Path, obj: dict) -> None:
 
 LATEST_COUNT=300
 CHUNK_SIZE=300
-MAX_ARTICLES=5000
-MAX_CANDIDATES=7500
+MAX_ARTICLES=9000
+MAX_CANDIDATES=14000
 STOPWORDS=set("a al an and as at con de del el en es for from in is la las lo los no of on or para por que se su the to un una with y tras hoy ayer today latest news este esta fue hay says dijo".split())
 
 def story_tokens(title: str) -> frozenset[str]:
